@@ -1,0 +1,95 @@
+
+<meta charset="UTF-8">
+<style>
+  .wrap { padding: 0.75rem 0; font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 1rem; }
+  .controls label { font-size: 12px; color: var(--color-text-secondary); }
+  select { font-size: 12px; max-width: 200px; }
+  .k-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .k-val { font-weight: 500; min-width: 32px; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); }
+  table { width: 100%; border-collapse: collapse; table-layout: auto; min-width: 520px; }
+  th, td { padding: 5px 7px; text-align: right; border: 0.5px solid var(--color-border-tertiary); font-size: 11px; white-space: nowrap; }
+  th { background: var(--color-background-secondary); font-weight: 500; color: var(--color-text-secondary); }
+  td:first-child, th:first-child { text-align: left; font-weight: 500; color: var(--color-text-primary); background: var(--color-background-secondary); position: sticky; left: 0; z-index: 1; min-width: 60px; }
+  th:first-child { color: var(--color-text-secondary); }
+  tr:hover td { background: var(--color-background-tertiary); }
+  tr:hover td:first-child { background: var(--color-background-tertiary); }
+  .hl { color: var(--color-text-info); font-weight: 500; }
+  .note { font-size: 11px; color: var(--color-text-secondary); margin-top: 8px; line-height: 1.5; }
+  @media (max-width: 480px) {
+    th, td { padding: 4px 5px; font-size: 10px; }
+    .controls { gap: 8px; }
+  }
+</style>
+<div class="wrap">
+  <div class="controls">
+    <div class="k-row">
+      <label>Factor (k):</label>
+      <input type="range" min="0.50" max="0.80" step="0.01" value="0.67" id="kSlider" oninput="update()" style="width:120px">
+      <span class="k-val" id="kVal">0.67</span>
+    </div>
+    <div>
+      <label>Preset: </label>
+      <select id="preset" onchange="applyPreset()">
+        <option value="0.67">Natural/bore water (0.67)</option>
+        <option value="0.64">NaCl / general (0.64)</option>
+        <option value="0.50">Meter default (0.50)</option>
+        <option value="0.70">Surface water (0.70)</option>
+        <option value="0.80">Custom max (0.80)</option>
+      </select>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table id="tbl"></table>
+  </div>
+  <p class="note">TDS in mg/L (ppm). EC corrected to 25&#176;C reference using 2%/&#176;C coefficient before applying k factor.</p>
+</div>
+<script>
+const temps = [5, 10, 15, 20, 22, 25, 30, 35, 40];
+const ecVals = [
+  100, 150, 200, 250, 300, 350, 400, 450, 500,
+  600, 700, 800, 900, 1000,
+  1250, 1500, 1750, 2000, 2250, 2500,
+  3000, 3500, 4000, 4500, 5000,
+  6000, 7500, 10000
+];
+
+function correctEC(ec, temp) {
+  return ec * (1 + 0.02 * (25 - temp));
+}
+
+function buildTable(k) {
+  const tbl = document.getElementById('tbl');
+  let html = '<thead><tr><th>&#956;S/cm</th>';
+  temps.forEach(t => { html += '<th>' + t + '&#176;C</th>'; });
+  html += '</tr></thead><tbody>';
+  ecVals.forEach(ec => {
+    html += '<tr><td>' + ec.toLocaleString() + '</td>';
+    temps.forEach(t => {
+      const ec25 = correctEC(ec, t);
+      const tds = Math.round(ec25 * k);
+      const hl = (ec === 2250 && t === 22);
+      html += '<td' + (hl ? ' class="hl"' : '') + '>' + tds.toLocaleString() + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+function update() {
+  const k = parseFloat(document.getElementById('kSlider').value);
+  document.getElementById('kVal').textContent = k.toFixed(2);
+  buildTable(k);
+}
+
+function applyPreset() {
+  const k = parseFloat(document.getElementById('preset').value);
+  document.getElementById('kSlider').value = k;
+  document.getElementById('kVal').textContent = k.toFixed(2);
+  buildTable(k);
+}
+
+buildTable(0.67);
+</script>
